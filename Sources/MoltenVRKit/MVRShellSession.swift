@@ -28,6 +28,7 @@ public final class MVRShellSession: ObservableObject {
     private var panels: [UInt32: MVRPanel] = [:]
     private var nextWireId: UInt32 = 1
     private var started = false
+    private var screenObserver: NSObjectProtocol?
 
     /// `icon` appears next to your app's name in MoltenVR's dock (128px is plenty).
     /// Omitted, it falls back to your app's own icon.
@@ -64,7 +65,7 @@ public final class MVRShellSession: ObservableObject {
         state = .connecting
         connection.start()
         // panel windows hide just off the primary screen, so a display change can expose them
-        NotificationCenter.default.addObserver(
+        screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
@@ -82,6 +83,8 @@ public final class MVRShellSession: ObservableObject {
     public func stop() {
         started = false
         connection.stop()
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
+        screenObserver = nil
         for p in panels.values { p.host?.tearDown() }
         panels.removeAll()
         state = .disconnected
